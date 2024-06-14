@@ -1,48 +1,74 @@
 import * as types from '@babel/types';
-import { isAsyncFunction, createCallbackExpression, isCypressCommand } from '../src/ast-utils';
+import { isCypressObject, isCypressCommand, isCypressAwaitExpression, isCypressExpression } from '../src/ast-utils';
 
-describe('AST Utils', () => {
-  describe('isAsyncFunction', () => {
-    test('identifies async functions correctly', () => {
-      const asyncFunctionNode = types.functionDeclaration(
-        types.identifier('test'),
-        [],
-        types.blockStatement([]),
-        false,
-        true
-      );
-      expect(isAsyncFunction(asyncFunctionNode)).toBe(true);
-
-      const regularFunctionNode = types.functionDeclaration(
-        types.identifier('test'),
-        [],
-        types.blockStatement([]),
-        false
-      );
-      expect(isAsyncFunction(regularFunctionNode)).toBe(false);
+describe('ast-utils', () => {
+  describe('isCypressObject', () => {
+    it('should return true for a Cypress object', () => {
+      const node = types.memberExpression(types.identifier('cy'), types.identifier('get'));
+      expect(isCypressObject(node)).toBe(true);
     });
-  });
 
-  describe('createCallbackExpression', () => {
-    test('throws error for non-expression arguments', () => {
-      const nonExpressionNode = types.objectPattern([]);
-      expect(() => createCallbackExpression(nonExpressionNode)).toThrow("arguments need to be an expression");
+    it('should return false for a non-Cypress object', () => {
+      const node = types.memberExpression(types.identifier('notCy'), types.identifier('get'));
+      expect(isCypressObject(node)).toBe(false);
     });
   });
 
   describe('isCypressCommand', () => {
-    test('identifies Cypress commands correctly', () => {
-      const cypressCommandNode = types.callExpression(
+    it('should return true for a Cypress command', () => {
+      const node = types.callExpression(
         types.memberExpression(types.identifier('cy'), types.identifier('click')),
         []
       );
-      expect(isCypressCommand(cypressCommandNode)).toBe(true);
+      expect(isCypressCommand(node)).toBe(true);
+    });
 
-      const nonCypressCommandNode = types.callExpression(
+    it('should return false for a non-Cypress command', () => {
+      const node = types.callExpression(
         types.memberExpression(types.identifier('notCy'), types.identifier('click')),
         []
       );
-      expect(isCypressCommand(nonCypressCommandNode)).toBe(false);
+      expect(isCypressCommand(node)).toBe(false);
+    });
+  });
+
+  describe('isCypressAwaitExpression', () => {
+    it('should return true for a Cypress await expression', () => {
+      const node = types.awaitExpression(
+        types.callExpression(
+          types.memberExpression(types.identifier('cy'), types.identifier('get')),
+          [types.stringLiteral('#button')]
+        )
+      );
+      expect(isCypressAwaitExpression(node)).toBe(true);
+    });
+
+    it('should return false for a non-Cypress await expression', () => {
+      const node = types.awaitExpression(
+        types.callExpression(
+          types.memberExpression(types.identifier('notCy'), types.identifier('get')),
+          [types.stringLiteral('#button')]
+        )
+      );
+      expect(isCypressAwaitExpression(node)).toBe(false);
+    });
+  });
+
+  describe('isCypressExpression', () => {
+    it('should return true for a Cypress expression', () => {
+      const node = types.callExpression(
+        types.memberExpression(types.identifier('cy'), types.identifier('find')),
+        [types.stringLiteral('input')]
+      );
+      expect(isCypressExpression(node)).toBe(true);
+    });
+
+    it('should return false for a non-Cypress expression', () => {
+      const node = types.callExpression(
+        types.memberExpression(types.identifier('notCy'), types.identifier('find')),
+        [types.stringLiteral('input')]
+      );
+      expect(isCypressExpression(node)).toBe(false);
     });
   });
 });

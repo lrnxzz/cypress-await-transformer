@@ -1,23 +1,53 @@
 import * as types from '@babel/types';
 
-export function isAsyncFunction(node: types.Node): boolean {
-    return (types.isFunctionDeclaration(node) || types.isArrowFunctionExpression(node)) && node.async === true;
-}
+/**
+ * Checks if a node is a Cypress object.
+ * A Cypress object is identified by the presence of an identifier named 'cy'.
+ * 
+ * @param {types.Node} node - The node to check.
+ * @returns {boolean} Returns true if the node is a Cypress object, false otherwise.
+ */
+export const isCypressObject = (node: types.Node): boolean => {
+  return types.isMemberExpression(node) && 
+         types.isIdentifier(node.object, { name: 'cy' });
+};
 
-export function createCallbackExpression(returnArgument: types.Node): types.Expression {
-    if (!types.isExpression(returnArgument)) {
-        throw new Error("arguments need to be an expression");
-    }
+/**
+ * Checks if a node is a Cypress command.
+ * A Cypress command is a call expression where the callee's object is an identifier 'cy'.
+ * 
+ * @param {types.Node} node - The node to check.
+ * @returns {boolean} Returns true if the node is a Cypress command, false otherwise.
+ */
+export const isCypressCommand = (node: types.Node): boolean => {
+  return types.isCallExpression(node) &&
+         types.isMemberExpression(node.callee) &&
+         types.isIdentifier(node.callee.object) &&
+         node.callee.object.name === 'cy';
+};
 
-    const statement = types.expressionStatement(returnArgument);
-    return types.callExpression(
-        types.memberExpression(types.identifier('cy'), types.identifier('then')),
-        [types.arrowFunctionExpression([types.identifier('n')], statement.expression)]
-    );
-}
+/**
+ * Checks if a node is a Cypress await expression.
+ * A Cypress await expression is an 'AwaitExpression' whose argument is a Cypress command.
+ * 
+ * @param {types.Node} node - The node to check.
+ * @returns {boolean} Returns true if the node is a Cypress await expression, false otherwise.
+ */
+export const isCypressAwaitExpression = (node: types.Node): boolean => {
+  if (!types.isAwaitExpression(node)) return false;
+  const argument = node.argument;
+  return types.isCallExpression(argument) && isCypressCommand(argument);
+};
 
-export function isCypressCommand(node: types.Node): boolean {
-    return types.isCallExpression(node) &&
-        types.isMemberExpression(node.callee) &&
-        types.isIdentifier(node.callee.object, { name: 'cy' });
-}
+/**
+ * Checks if a node is a Cypress expression.
+ * A Cypress expression is a call expression where the callee's object is an identifier 'cy'.
+ * 
+ * @param {types.Node} node - The node to check.
+ * @returns {boolean} Returns true if the node is a Cypress expression, false otherwise.
+ */
+export const isCypressExpression = (node: types.Node): boolean => {
+  return types.isCallExpression(node) &&
+         types.isMemberExpression(node.callee) &&
+         types.isIdentifier(node.callee.object, { name: 'cy' });
+};
